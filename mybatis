@@ -1,0 +1,208 @@
+# Mybatis
+
+### 一、课前回顾
+
+​	**1）jdbc回顾**![](http://tu.eagleslab.com/images/2020/06/20/56e7896c6c70db54260d8f7453420e79.png)
+
+​			
+
+​			                                      ![](http://tu.eagleslab.com/images/2020/06/20/4d4473fd58e8bf1c261a8afd50f86f20.png)
+
+​		Mybatis是直接基于JDBC做了简单的映射包装，是一个类似于Hibernate的ORM持久化框架，支持普通SQL查询，存储过程以及高级映射。。MyBatis消除了几乎所有的JDBC代码和参数的手工设置以及对结果集的检索封装。MyBatis可以使用简单的**XML或注解**用于配置和原始映射，将接口和Java的POJO（Plain Old Java Objects，普通的Java对象）映射成数据库中的记录。
+
+​		从性能来看的话：JDBC>Mybatis>Hibernate
+
+**2）Mybatis整体架构**
+
+​		![](C:\Users\zhujn\AppData\Roaming\Typora\typora-user-images\1592648856827.png)
+
+### 1、添加依赖
+
+```xml
+<dependencies>
+            <!-- 添加mybatis支持 -->
+            <dependency>
+                <groupId>org.mybatis</groupId>
+                <artifactId>mybatis</artifactId>
+                <version>3.3.0</version>
+            </dependency>
+            <!-- jdbc驱动包  -->
+            <dependency>
+		        <groupId>mysql</groupId>
+		        <artifactId>mysql-connector-java</artifactId>
+		        <version>8.0.13</version>
+    		</dependency>
+            <dependency>
+                <groupId>log4j</groupId>
+                <artifactId>log4j</artifactId>
+                <version>1.2.17</version>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.10</version>
+            </dependency>
+        </dependencies>
+```
+
+### 2、项目架构
+
+![](http://tu.eagleslab.com/images/2020/06/20/84a3499a403bd3a4f0eec0fefe79b8c3.png)
+
+### 3、java代码开发&resources文件配置
+
+#### 		a、User实体类部分
+
+```java
+public class User {
+	private int id;
+	private String name;
+	private String sex;
+	private int age;
+	public User(int id, String name, String sex, int age) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.sex = sex;
+		this.age = age;
+	}
+	public User() {
+		// TODO Auto-generated constructor stub
+	}
+	get()/set()
+	}
+```
+
+#### 	  b、实体类映射文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.user.mapper">
+	<!-- 根据ID来查询 -->
+    <select id="selectById" parameterType="int" resultType="com.mybatis.entity.User">
+    	select * from user1 where id = #{id}
+    </select>
+    
+    <delete id="removeUser" parameterType="int">
+    	delete from
+    	user1 
+    	where id = #{id}
+    </delete>
+    
+    <insert id="saveUser" parameterType="com.mybatis.entity.User">
+    	insert into user1(id,name,sex,age)
+    	values (#{id},#{name},#{sex},#{age})
+    </insert>
+</mapper> 
+```
+
+#### 	c、mybatis配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<!--包含对Mybatis系统的核心配置-->
+<configuration>
+    <properties resource="db.properties"/>
+    <settings>
+        <setting name="logImpl" value="LOG4j"/>
+    </settings>
+   <!--环境,可以配置多个，default:指定采用哪个环境-->
+	<environments default="mysql">
+        <!--id:唯一标识-->
+        <environment id="mysql">
+            <!--指定事务管理类型，简单使用jdbc的提交和回滚设置-->
+            <transactionManager type="JDBC"></transactionManager>
+            <!--数据源配置，POOLED是jdbc连接对象的数据源连接池实现-->
+            <dataSource type="POOLED">
+                <property name="driver" value="${driver}"/>
+                <property name="url" value="${url}"/>
+                <property name="username" value="${username}"/>
+                <property name="password" value="${password}"/>
+            </dataSource>
+        </environment>
+    </environments>
+    <!-- 告诉mybatis去哪里找持久化类的映射文件 -->
+	<mappers>
+		<mapper resource="com/user/mapper/UserMapper.xml"/>
+	</mappers>
+   
+</configuration>
+
+```
+
+#### d、数据库属性文件
+
+```properties
+driver=com.mysql.jdbc.Driver
+url=jdbc:mysql://127.0.0.1:3306/test
+username=root
+password=111111
+```
+
+#### e、日志文件
+
+```properties
+# Global logging configuration
+log4j.rootLogger=ERROR, stdout
+# MyBatis logging configuration...
+log4j.logger.org.fkit.mapper.UserMapper=DEBUG
+# Console output...
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p [%t] - %m%n
+ 
+```
+
+#### 4、测试类
+
+```java
+package com.mybatis.test;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import org.junit.Test;
+
+import com.mybatis.entity.User;
+
+public class TestUser {
+	@Test
+	public void fingdById() {
+		try {
+			InputStream inputStream
+				= Resources.getResourceAsStream("mybatis-config.xml");
+			
+			SqlSessionFactory sqlSessionFactory
+				= new SqlSessionFactoryBuilder().build(inputStream);
+			
+			SqlSession session = sqlSessionFactory.openSession();
+			
+			User u = session.selectOne("com.user.mapper.selectById", 1);
+			System.out.println(u.getAge());
+			session.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+```
+
+### 4、myBatis使用步骤总结
+
+ **1)配置mybatis-config.xml 全局的配置文件 (1、数据源，2、外部的mapper)**
+ **2)创建SqlSessionFactory**
+**3)通过SqlSessionFactory创建SqlSession对象**
+**4)通过SqlSession操作数据库 CRUD**
+**5)调用session.commit()提交事务**
+**6)调用session.close()关闭会话**
